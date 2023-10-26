@@ -35,6 +35,7 @@ struct pcb {
     int service_time;
     int remaining_cpu_time;
     int status;
+    int queue;
     struct pcb * next;
 };
 
@@ -42,13 +43,13 @@ typedef struct pcb Pcb;
 typedef Pcb * PcbPtr;
 
 /* Function Prototypes */
-PcbPtr startPcb(PcbPtr);
-PcbPtr suspendPcb(PcbPtr);
-PcbPtr terminatePcb(PcbPtr);
-PcbPtr printPcb(PcbPtr);
-void   printPcbHdr(void);
-PcbPtr createnullPcb();
-PcbPtr enqPcb(PcbPtr, PcbPtr);
-PcbPtr deqPcb(PcbPtr*);
+PcbPtr StartPcb(PcbPtr);
+PcbPtr SuspendPcb(PcbPtr);
+PcbPtr TerminatePcb(PcbPtr);
+PcbPtr PrintPcb(PcbPtr);
+void   PrintPcbHdr(void);
+PcbPtr CreatenullPcb();
+PcbPtr EnqPcb(PcbPtr, PcbPtr);
+PcbPtr DeqPcb(PcbPtr*);
 
 #endif

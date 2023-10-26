@@ -1,7 +1,7 @@
-/* Main include header file for FCFS dispatcher */
+/* Main include header file for RR dispatcher */
 
-#ifndef FCFS_MAIN
-#define FCFS_MAIN
+#ifndef RR_MAIN
+#define RR_MAIN
 
 /* Include files */
 #include <stdio.h>
@@ -12,7 +12,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+// #include "pcb_fcfs.h"
 #include "pcb.h"
+#include "test-params.h"
 
 #ifndef FALSE
 #define FALSE 0
