@@ -23,7 +23,7 @@ PcbPtr CreatenullPcb()
     new_process_Ptr->args[1] = NULL;
     new_process_Ptr->arrival_time = 0;
     new_process_Ptr->service_time = 0;
-    new_process_Ptr->remaining_cpu_time = 0;
+    new_process_Ptr->cpu_time_spent = 0;
     new_process_Ptr->status = PCB_UNINITIALIZED;
     new_process_Ptr->queue = 0;
     new_process_Ptr->next = NULL;
@@ -169,7 +169,7 @@ PcbPtr PrintPcb(PcbPtr p)
 {
     printf("%7d%7d%9d%7d  ",
         (int) p->pid, p->arrival_time, p->service_time,
-            p->remaining_cpu_time);
+            p->cpu_time_spent);
     switch (p->status) {
         case PCB_UNINITIALIZED:
             printf("UNINITIALIZED");

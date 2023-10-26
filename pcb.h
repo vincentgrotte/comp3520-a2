@@ -33,7 +33,7 @@ struct pcb {
     char * args[3];
     int arrival_time;
     int service_time;
-    int remaining_cpu_time;
+    int cpu_time_spent;
     int status;
     int queue;
     struct pcb * next;

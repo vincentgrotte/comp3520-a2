@@ -1,6 +1,7 @@
 BUILD := gcc -pthread \
 	main.c \
 	pcb.c \
+	test-params.c \
 	-o solution
 
 build:
