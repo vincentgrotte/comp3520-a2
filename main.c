@@ -9,6 +9,7 @@ extern const int TEST_PARAM_K;
 extern const int TEST_PARAM_T0;
 extern const int TEST_PARAM_T1;
 
+
 int main(int argc, char *argv[]) {
 
     printf("\n");
@@ -171,123 +172,115 @@ int main(int argc, char *argv[]) {
         // If a process is currently running;
         if (current_process) {
             
-            printf("[L%d::%d] Tock\n", current_process->queue, current_process->pid);
+            // If the process is complete
+            if (current_process->cpu_time_spent >= current_process->service_time) {
 
-            // ---------------------------
-            //  L0 Queue logic (FCFS w/ timeout)
-            // ---------------------------
+                // Send SIGINT to the process to terminate it
+                TerminatePcb(current_process);
 
-            if (current_process->queue == 0) {
+                // Calculate and accumulate turnaround time and wait time;
+                turnaround_time = timer - current_process->arrival_time;
+                av_turnaround_time += turnaround_time;
+                av_wait_time += (turnaround_time - current_process->service_time);   
+                
+                printf(
+                    "[L0::%d] turnaround time = %d, waiting time = %d\n",
+                    current_process->pid,
+                    turnaround_time, 
+                    turnaround_time - current_process->service_time
+                );
 
-                // If the process is complete
-                if (current_process->cpu_time_spent >= current_process->service_time) {
+                // Free up process structure memory
+                free(current_process);
+                current_process = NULL;
 
-                    // Send SIGINT to the process to terminate it
-                    TerminatePcb(current_process);
+            }
 
-                    // Calculate and accumulate turnaround time and wait time;
-                    turnaround_time = timer - current_process->arrival_time;
-                    av_turnaround_time += turnaround_time;
-                    av_wait_time += (turnaround_time - current_process->service_time);   
-                    
-                    printf(
-                        "[L0::%d] turnaround time = %d, waiting time = %d\n",
-                        current_process->pid,
-                        turnaround_time, 
-                        turnaround_time - current_process->service_time
-                    );
+            // If times up in L0 queue
+            else if (current_process->queue == 0 &&
+                current_process->cpu_time_spent >= param_t0) {
 
-                    // Free up process structure memory
-                    free(current_process);
-                    current_process = NULL;
+                // Send SIGTSTP to suspend it
+                SuspendPcb(current_process);
 
-                }
+                // Calculate and accumulate turnaround time and wait time;
+                turnaround_time = timer - current_process->arrival_time;
+                av_turnaround_time += turnaround_time;
+                av_wait_time += (turnaround_time - current_process->service_time);   
+                
+                // Reset cpu_time_spent
+                current_process->cpu_time_spent = 0;
 
-                // If times up in L0 queue
-                else if (current_process->cpu_time_spent > param_t0) {
+                printf("[L0::%d] rolling over to L1 \n", current_process->pid);
 
-                    // Send SIGTSTP to suspend it
-                    SuspendPcb(current_process);
+                // Enqueue it on the L1 queue
+                current_process->queue = 1;
+                L1_queue = EnqPcb(L1_queue, current_process);
+                current_process = NULL;                   
 
-                    // Calculate and accumulate turnaround time and wait time;
-                    turnaround_time = timer - current_process->arrival_time;
-                    av_turnaround_time += turnaround_time;
-                    av_wait_time += (turnaround_time - current_process->service_time);   
-                    
-                    printf("[L0::%d] rolling over to L1 \n", current_process->pid);
+            }
 
-                    // Enqueue it on the L1 queue
-                    current_process->queue = 1;
-                    L1_queue = EnqPcb(L1_queue, current_process);
-                    current_process = NULL;                   
+            // If process in L1 queue has used up all its iterations
+            else if (current_process->queue == 1 &&
+                current_process->iterations >= param_k) {
+            
+                // Send SIGTSTP to suspend it
+                // SuspendPcb(current_process);
+                TerminatePcb(current_process);
 
-                }
+                // Calculate and accumulate turnaround time and wait time;
+                turnaround_time = timer - current_process->arrival_time;
+                av_turnaround_time += turnaround_time;
+                av_wait_time += (turnaround_time - current_process->service_time);   
+                
+                // Reset cpu_time_spent
+                current_process->cpu_time_spent = 0;
+
+                printf("[L1::%d] rolling over to L2 \n", current_process->pid);
+
+                // Enqueue it on the L2 queue
+                current_process->queue = 2;
+                L2_queue = EnqPcb(L2_queue, current_process);
+                current_process = NULL;
+
+                free(current_process);
+                current_process = NULL;
+
+            }
+
+            // If times up in L1 queue for this iteration
+            else if (current_process->queue == 1 &&
+                current_process->cpu_time_spent >= param_t1) {
+                
+                // Increment process iterations
+                current_process->iterations++;
+
+                // Send SIGTSTP to suspend it
+                SuspendPcb(current_process);
+
+                // Calculate and accumulate turnaround time and wait time;
+                turnaround_time = timer - current_process->arrival_time;
+                av_turnaround_time += turnaround_time;
+                av_wait_time += (turnaround_time - current_process->service_time);
+                
+                // Reset cpu_time_spent
+                current_process->cpu_time_spent = 0;
+                
+                printf(
+                    "[L1::%d] iteration (%d) finished\n",
+                    current_process->pid,
+                    current_process->iterations
+                );
+
+                // Enqueue it on the end of the L1 queue
+                L1_queue = EnqPcb(L1_queue, current_process);
+                current_process = NULL;                
                 
             }
 
-            // ---------------------------
-            //  L1 Queue logic (RR w/ timeout)
-            // ---------------------------
-
-            else if (current_process->queue == 1) {
-            
-                // If the process is complete
-                if (current_process->cpu_time_spent >= current_process->service_time) {
-
-                    // Send SIGINT to the process to terminate it
-                    TerminatePcb(current_process);
-
-                    // Calculate and accumulate turnaround time and wait time;
-                    turnaround_time = timer - current_process->arrival_time;
-                    av_turnaround_time += turnaround_time;
-                    av_wait_time += (turnaround_time - current_process->service_time);   
-                    
-                    printf(
-                        "[L1::%d] turnaround time = %d, waiting time = %d\n",
-                        current_process->pid,
-                        turnaround_time, 
-                        turnaround_time - current_process->service_time
-                    );
-
-                    // Free up process structure memory
-                    free(current_process);
-                    current_process = NULL;
-
-                }
-
-                // If times up in L1 queue
-                else if (current_process->cpu_time_spent >= param_t1) {
-                    
-                    // // Send SIGTSTP to suspend it
-                    // SuspendPcb(current_process);
-                    TerminatePcb(current_process);
-
-                    // Calculate and accumulate turnaround time and wait time;
-                    turnaround_time = timer - current_process->arrival_time;
-                    av_turnaround_time += turnaround_time;
-                    av_wait_time += (turnaround_time - current_process->service_time);   
-                    
-                    printf("[L1::%d] rolling over to L2 \n", current_process->pid);
-
-                    free(current_process);
-                    current_process = NULL;
-
-                    // // Enqueue it on the L2 queue
-                    // current_process->queue = 2;
-                    // L2_queue = EnqPcb(L2_queue, current_process);
-                    // current_process = NULL;                   
-                    
-                }
-                            
-            }
-
-            // ---------------------------
-            //  L2 Queue logic (FCFS interruptable)
-            // ---------------------------
-
             else if (current_process->queue == 2) {
             
-                // L2 stuff
+                // L2 stuff - Fcfs BUT INTERRUPTABLE
             
             }
 
@@ -298,41 +291,37 @@ int main(int argc, char *argv[]) {
 
         }
 
-        // If no process currently running && L0 queue is not empty
+        // If no process currently running
         if (!current_process) {
 
-            // First priority
+            // IF L0 queue is not empty (1st priority)
             if (L0_queue) {
 
                 // Dequeue process from L0 queue
                 current_process = DeqPcb(&L0_queue);
-
-                printf("[L0::%d] START\n", current_process->pid);
                 
                 // If already started but suspended, restart it (send SIGCONT to it)
                 // else start it (fork & exec)
                 // Set it as currently running process;
                 StartPcb(current_process);
 
+            // IF L1 queue is not empty (2nd priority)
             } else if (L1_queue) {
 
                 // Dequeue process from L1 queue
                 current_process = DeqPcb(&L1_queue);
-
-                printf("[L1::%d] START\n", current_process->pid);
                 
-                // If already started but suspended, restart it (send SIGCONT to it)
-                // else start it (fork & exec)
-                // Set it as currently running process;
+                // (re)start it (send SIGCONT to it)
                 StartPcb(current_process);
 
+            // IF L2 queue is not empty (lowest priority)
             } else if (L2_queue) {
 
-                //
+                // Fcfs BUT INTERRUPTABLE
 
             } else {
 
-                //
+                // Do nothing
 
             }
 
@@ -343,12 +332,7 @@ int main(int argc, char *argv[]) {
             
         // Increment dispatcher timer;
         timer++;
-            
-        // Loop
-        if (current_process) {
-            printf("[L%d::%d] Tick\n", current_process->queue, current_process->pid);
-        }
-
+        
     }
 
     // print out average turnaround time and average wait time

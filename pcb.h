@@ -36,6 +36,7 @@ struct pcb {
     int cpu_time_spent;
     int status;
     int queue;
+    int iterations;
     struct pcb * next;
 };
 
