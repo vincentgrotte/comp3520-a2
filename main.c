@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     printf("\n");
 
     // ---------------------------
-    //  0. Set parameters via user input or with preset/test values
+    //  Set parameters via user input or with preset/test values
     // ---------------------------
 
     // test values
@@ -83,8 +83,6 @@ int main(int argc, char *argv[]) {
     PcbPtr current_process = NULL;
     PcbPtr process = NULL;
     int timer = 0;
-    int time_quantum;
-    int quantum;
 
     int turnaround_time;
     double av_turnaround_time = 0.0, av_wait_time = 0.0;
@@ -184,7 +182,7 @@ int main(int argc, char *argv[]) {
                 av_wait_time += (turnaround_time - current_process->service_time);   
                 
                 printf(
-                    "[L0::%d] turnaround time = %d, waiting time = %d\n",
+                    "[L0::%d] Completed. Turnaround time = %d, waiting time = %d\n",
                     current_process->pid,
                     turnaround_time, 
                     turnaround_time - current_process->service_time

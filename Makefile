@@ -13,13 +13,13 @@ build-all: build
 
 debug:
 	$(BUILD) -Wall
-	./solution -d
+	./solution test-input.txt -t
 
 roll:
 	./random test-input.txt
 
 test: build
-	./solution ./test-input.txt -t
+	./solution test-input.txt -t
 
 run: build
 	./solution test-input.txt
