@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
     // - there's anything in any of the queues
     // - or there is a currently running process:
 
-    while ( job_queue || L0_queue || L1_queue || current_process ) {
+    while ( job_queue || L0_queue || L1_queue || L2_queue || current_process ) {
     // while (job_queue || L0_queue || L1_queue || L2_queue || current_process ) {
 
         // Unload any pending processes from the input queue:
@@ -182,8 +182,12 @@ int main(int argc, char *argv[]) {
                 av_wait_time += (turnaround_time - current_process->service_time);   
                 
                 printf(
-                    "[L0::%d] Completed. Turnaround time = %d, waiting time = %d\n",
+                    "[*] L%d::%d [%d] Completed. A:%d S:%d T:%d, W:%d\n",
+                    current_process->queue,
                     current_process->pid,
+                    timer,
+                    current_process->arrival_time,
+                    current_process->service_time,
                     turnaround_time, 
                     turnaround_time - current_process->service_time
                 );
@@ -201,15 +205,10 @@ int main(int argc, char *argv[]) {
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
 
-                // Calculate and accumulate turnaround time and wait time;
-                turnaround_time = timer - current_process->arrival_time;
-                av_turnaround_time += turnaround_time;
-                av_wait_time += (turnaround_time - current_process->service_time);   
-                
                 // Reset cpu_time_spent
-                current_process->cpu_time_spent = 0;
+                // current_process->cpu_time_spent = 0;
 
-                printf("[L0::%d] rolling over to L1 \n", current_process->pid);
+                printf("[*] L0::%d [%d] rolling over to L1 \n", current_process->pid, timer);
 
                 // Enqueue it on the L1 queue
                 current_process->queue = 1;
@@ -223,50 +222,38 @@ int main(int argc, char *argv[]) {
                 current_process->iterations >= param_k) {
             
                 // Send SIGTSTP to suspend it
-                // SuspendPcb(current_process);
-                TerminatePcb(current_process);
+                SuspendPcb(current_process);
 
-                // Calculate and accumulate turnaround time and wait time;
-                turnaround_time = timer - current_process->arrival_time;
-                av_turnaround_time += turnaround_time;
-                av_wait_time += (turnaround_time - current_process->service_time);   
-                
                 // Reset cpu_time_spent
-                current_process->cpu_time_spent = 0;
+                // current_process->cpu_time_spent = 0;
 
-                printf("[L1::%d] rolling over to L2 \n", current_process->pid);
+                printf("[*] L1::%d [%d] rolling over to L2 \n", current_process->pid, timer);
 
                 // Enqueue it on the L2 queue
                 current_process->queue = 2;
                 L2_queue = EnqPcb(L2_queue, current_process);
                 current_process = NULL;
 
-                free(current_process);
-                current_process = NULL;
-
             }
 
             // If times up in L1 queue for this iteration
             else if (current_process->queue == 1 &&
-                current_process->cpu_time_spent >= param_t1) {
+                current_process->cpu_time_spent_iteration >= param_t1) {
                 
-                // Increment process iterations
+                // Increment process iterations and reset iteration timer
                 current_process->iterations++;
+                current_process->cpu_time_spent_iteration = 0;
 
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
 
-                // Calculate and accumulate turnaround time and wait time;
-                turnaround_time = timer - current_process->arrival_time;
-                av_turnaround_time += turnaround_time;
-                av_wait_time += (turnaround_time - current_process->service_time);
-                
                 // Reset cpu_time_spent
-                current_process->cpu_time_spent = 0;
+                // current_process->cpu_time_spent = 0;
                 
                 printf(
-                    "[L1::%d] iteration (%d) finished\n",
+                    "[*] L1::%d [%d] iteration (%d) finished\n",
                     current_process->pid,
+                    timer,
                     current_process->iterations
                 );
 
@@ -278,13 +265,31 @@ int main(int argc, char *argv[]) {
 
             else if (current_process->queue == 2) {
             
-                // L2 stuff - Fcfs BUT INTERRUPTABLE
+                // If anything is waiting in an other queue, suspend this process 
+                if (L0_queue || L1_queue) {
+
+                    // Send SIGTSTP to suspend it
+                    SuspendPcb(current_process);
+
+                    printf(
+                        "[*] L2::%d [%d] interrupted at %d cpu time spent...\n",
+                        current_process->cpu_time_spent,
+                        current_process->pid,
+                        timer
+                    );
+
+                    // Enqueue it on the L2 queue
+                    L2_queue = EnqPcb(L2_queue, current_process);
+                    current_process = NULL;                    
+
+                }
             
             }
 
             // Increment process cpu time spent;
             if (current_process) {
                 current_process->cpu_time_spent++;
+                current_process->cpu_time_spent_iteration++;
             }
 
         }
@@ -315,11 +320,15 @@ int main(int argc, char *argv[]) {
             // IF L2 queue is not empty (lowest priority)
             } else if (L2_queue) {
 
-                // Fcfs BUT INTERRUPTABLE
+                // Dequeue process from L1 queue
+                current_process = DeqPcb(&L2_queue);
+                
+                // (re)start it (send SIGCONT to it)
+                StartPcb(current_process);
 
             } else {
 
-                // Do nothing
+                printf("No jobs being processed currently...\n");
 
             }
 

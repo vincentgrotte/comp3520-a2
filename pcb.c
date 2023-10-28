@@ -24,9 +24,10 @@ PcbPtr CreatenullPcb()
     new_process_Ptr->arrival_time = 0;
     new_process_Ptr->service_time = 0;
     new_process_Ptr->cpu_time_spent = 0;
-    new_process_Ptr->status = PCB_UNINITIALIZED;
-    new_process_Ptr->queue = 0;
+    new_process_Ptr->cpu_time_spent_iteration = 0;
     new_process_Ptr->iterations = 0;
+    new_process_Ptr->queue = 0;
+    new_process_Ptr->status = PCB_UNINITIALIZED;
     new_process_Ptr->next = NULL;
     return new_process_Ptr;
 }

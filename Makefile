@@ -21,5 +21,8 @@ roll:
 test: build
 	./solution test-input.txt -t
 
+test-record: build
+	./solution test-input.txt -t > test-output.txt
+
 run: build
 	./solution test-input.txt

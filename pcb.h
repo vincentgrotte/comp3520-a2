@@ -34,9 +34,10 @@ struct pcb {
     int arrival_time;
     int service_time;
     int cpu_time_spent;
-    int status;
-    int queue;
+    int cpu_time_spent_iteration;
     int iterations;
+    int queue;
+    int status;
     struct pcb * next;
 };
 
