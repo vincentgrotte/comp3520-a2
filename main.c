@@ -1,44 +1,33 @@
 #include "main.h"
 
-// Parameters
-int param_k; // param_k
-int param_t0; // param_t0
-int param_t1; // param_t1
-
-extern const int TEST_PARAM_K;
-extern const int TEST_PARAM_T0;
-extern const int TEST_PARAM_T1;
-
 
 int main(int argc, char *argv[]) {
 
-    printf("\n");
+    // Parameters
+    int param_k; // time quanta for Level-0 queue
+    int param_t0; // time quanta for Level-1 queue
+    int param_t1; // number of iterations for a job in the Level-1 queue
 
     // ---------------------------
-    //  Set parameters via user input or with preset/test values
+    //  Allow user to set parameters via command line
     // ---------------------------
 
-    // test values
-    if ( argc > 2 ) {
+    if ( argc == 5 ) {
 
-        char *argument = (char*) &argv[2];
-        char *flag = "-t"; // -t for test
+        printf("Using command line params\n");
+        
+        param_k = strtol(argv[2], NULL, 10);
+        param_t0 = strtol(argv[3], NULL, 10);
+        param_t1 = strtol(argv[4], NULL, 10);
+            
+        printf("L0Q max time: %d\n", param_t0);
+        printf("L1Q max time: %d\n", param_t1);
+        printf("L1Q max iterations: %d\n", param_k);
 
-        if ( strcmp(argument, flag) ) {
+    // ---------------------------
+    //  "Normal" Flow - Ask user for each parameter as console input
+    // ---------------------------
 
-            printf("Using test configuration.\n");
-            param_k = TEST_PARAM_K;
-            param_t0 = TEST_PARAM_T0;
-            param_t1 = TEST_PARAM_T1;
-
-        } else {
-
-            printf("Error: Bad Input. Exiting.\n");
-            exit(-1);
-
-        }
-
-    // normal flow
     } else {
 
         printf("Please enter an integer for the time quanta for Level-0 queue:\n");
@@ -73,7 +62,9 @@ int main(int argc, char *argv[]) {
 
     }
 
-    /*** Main function variable declarations ***/
+    // ---------------------------
+    //  Main function variable declarations
+    // ---------------------------
 
     FILE * input_list_stream = NULL;
     PcbPtr job_queue = NULL;
@@ -89,7 +80,7 @@ int main(int argc, char *argv[]) {
     int n = 0;
 
     // ---------------------------
-    //  Check input
+    //  Read job list from command line argument
     // ---------------------------
 
     if (argc <= 0) {
@@ -113,15 +104,11 @@ int main(int argc, char *argv[]) {
 
     }
     
-    printf("Level-0 max cpu time: %d\n", param_t0);
-    printf("Level-1 max cpu time: %d\n", param_t1);
-    printf("Level-1 queue max iterations: %d\n", param_k);
-
     // ---------------------------
     //  Populate the job queue
     // ---------------------------
 
-    printf("Reading jobs from %s\n", argv[1]);
+    printf("Loaded jobs from %s\n", argv[1]);
 
     while (!feof(input_list_stream)) {  // put processes into job_queue
         
@@ -136,14 +123,11 @@ int main(int argc, char *argv[]) {
         
         }
 
-        printf("%d, %d\n", process->arrival_time, process->service_time);
         process->status = PCB_INITIALIZED;
         job_queue = EnqPcb(job_queue, process);
 	    n++;
 
     }
-
-    printf("Finished loading job queue\n");
 
     // ---------------------------
     //  Handle the queues
@@ -181,16 +165,16 @@ int main(int argc, char *argv[]) {
                 av_turnaround_time += turnaround_time;
                 av_wait_time += (turnaround_time - current_process->service_time);   
                 
-                printf(
-                    "[*] L%d::%d [%d] Completed. A:%d S:%d T:%d, W:%d\n",
-                    current_process->queue,
-                    current_process->pid,
-                    timer,
-                    current_process->arrival_time,
-                    current_process->service_time,
-                    turnaround_time, 
-                    turnaround_time - current_process->service_time
-                );
+                // printf(
+                //     "[*] L%d::%d [%d] COMPLETE A:%d S:%d T:%d, W:%d\n",
+                //     current_process->queue,
+                //     current_process->pid,
+                //     timer,
+                //     current_process->arrival_time,
+                //     current_process->service_time,
+                //     turnaround_time, 
+                //     turnaround_time - current_process->service_time
+                // );
 
                 // Free up process structure memory
                 free(current_process);
@@ -205,11 +189,8 @@ int main(int argc, char *argv[]) {
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
 
-                // Reset cpu_time_spent
-                // current_process->cpu_time_spent = 0;
-
-                printf("[*] L0::%d [%d] rolling over to L1 \n", current_process->pid, timer);
-
+                // printf("[*] L0::%d [%d] rolling over to L1 \n", current_process->pid, timer);
+                
                 // Enqueue it on the L1 queue
                 current_process->queue = 1;
                 L1_queue = EnqPcb(L1_queue, current_process);
@@ -224,10 +205,7 @@ int main(int argc, char *argv[]) {
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
 
-                // Reset cpu_time_spent
-                // current_process->cpu_time_spent = 0;
-
-                printf("[*] L1::%d [%d] rolling over to L2 \n", current_process->pid, timer);
+                // printf("[*] L1::%d [%d] rolling over to L2 \n", current_process->pid, timer);
 
                 // Enqueue it on the L2 queue
                 current_process->queue = 2;
@@ -246,16 +224,13 @@ int main(int argc, char *argv[]) {
 
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
-
-                // Reset cpu_time_spent
-                // current_process->cpu_time_spent = 0;
                 
-                printf(
-                    "[*] L1::%d [%d] iteration (%d) finished\n",
-                    current_process->pid,
-                    timer,
-                    current_process->iterations
-                );
+                // printf(
+                //     "[*] L1::%d [%d] iteration (%d) finished\n",
+                //     current_process->pid,
+                //     timer,
+                //     current_process->iterations
+                // );
 
                 // Enqueue it on the end of the L1 queue
                 L1_queue = EnqPcb(L1_queue, current_process);
@@ -271,12 +246,12 @@ int main(int argc, char *argv[]) {
                     // Send SIGTSTP to suspend it
                     SuspendPcb(current_process);
 
-                    printf(
-                        "[*] L2::%d [%d] interrupted at %d cpu time spent...\n",
-                        current_process->cpu_time_spent,
-                        current_process->pid,
-                        timer
-                    );
+                    // printf(
+                    //     "[*] L2::%d [%d] interrupted at %d cpu time spent...\n",
+                    //     current_process->cpu_time_spent,
+                    //     current_process->pid,
+                    //     timer
+                    // );
 
                     // Enqueue it on the L2 queue
                     L2_queue = EnqPcb(L2_queue, current_process);
@@ -328,7 +303,7 @@ int main(int argc, char *argv[]) {
 
             } else {
 
-                printf("No jobs being processed currently...\n");
+                // printf("No jobs being processed currently...\n");
 
             }
 

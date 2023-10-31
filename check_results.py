@@ -23,8 +23,17 @@ output_lines = output_file.readlines()
 
 print("# Results #")
 
-results = []
+results_completions = []
+results_iterations = []
+results_rollovers = []
+
 completed = 0
+iterations = 0
+rolled_over = 0
+
+param_t0 = None
+param_t1 = None
+param_k = None
 
 # Scan test output and gather results
 for output_line in output_lines:
@@ -32,18 +41,14 @@ for output_line in output_lines:
 
     if "Level-0 max cpu time:" in clean_line:
         param_t0 = clean_line[22]
-        print(f"# param_t0: {param_t0}")
 
     if "Level-1 max cpu time:" in clean_line:
         param_t1 = clean_line[22]
-        print(f"# param_t1: {param_t1}")
 
     if "Level-1 queue max iterations:" in clean_line:
         param_k = clean_line[30]
-        print(f"# param_k: {param_k}")
 
     if "[*]" in clean_line:
-        # print(clean_line)
 
         # Check completed jobs
         if "Completed" in clean_line:
@@ -62,6 +67,15 @@ for output_line in output_lines:
             match = re.search("W:(\d+)", clean_line)
             input_wait = match.group(1) if match else None
 
+            results_completions.append({
+                "arrival_time": input_arrival_time,
+                "queue": input_queue,
+                "service_time": input_service_time,
+                "timer": input_timer,
+                "turnaround": input_turnaround,
+                "wait": input_wait,
+            })
+
             print(
                 f"TIME:{input_timer} "
                 f"Q:{input_queue} "
@@ -70,6 +84,18 @@ for output_line in output_lines:
                 f"T:{input_turnaround} "
                 f"W:{input_wait}"
             )
+
+        if "rolling over" in clean_line:
+            iterations += 1
+
+            match = re.search("\[\*\] L(\d+)", clean_line)
+            input_queue = match.group(1) if match else None
+
+        if "iteration" in clean_line:
+            rolled_over += 1
+
+            match = re.search("\[\*\] L(\d+)", clean_line)
+            input_queue = match.group(1) if match else None
 
 # Check input against results
 if completed == len(definitions):

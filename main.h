@@ -12,9 +12,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// #include "pcb_fcfs.h"
 #include "pcb.h"
-#include "test-params.h"
 
 #ifndef FALSE
 #define FALSE 0
