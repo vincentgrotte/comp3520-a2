@@ -11,17 +11,20 @@ build-all: build
 	gcc sigtrap.c -o process
 
 check:
-	python3 check_results.py
+	python3 check_results.py ./tests/jobs.txt ./output/output.txt
+
+check-verbose:
+	VERBOSE=1 python3 check_results.py ./tests/jobs.txt ./output/output.txt
 
 debug:
 	$(BUILD) -Wall
-	./solution ./tests/test-1.txt 3 3 5 | tee output/output-1.txt
+	./solution ./tests/jobs-1.txt 3 3 5 | tee output/output-1.txt
 
 roll:
 	./random test-input.txt
 
 test: build
-	./solution ./tests/test.txt 3 3 5 | tee output/output.txt
+	./solution ./tests/jobs.txt 3 3 5 | tee output/output.txt
 
 # test-all: build
 # 	./solution ./tests/test-1.txt 3 3 5 | tee output/output-1.txt
