@@ -26,17 +26,17 @@ roll:
 test: build
 	./solution ./tests/jobs.txt 3 3 5 | tee output/output.txt
 
-# test-all: build
-# 	./solution ./tests/test-1.txt 3 3 5 | tee output/output-1.txt
-# 	./solution ./tests/test-2.txt 3 3 5 | tee output/output-2.txt
-# 	./solution ./tests/test-3.txt 3 3 5 | tee output/output-3.txt
-# 	./solution ./tests/test-4.txt 3 3 5 | tee output/output-4.txt
-# 	./solution ./tests/test-5.txt 3 3 5 | tee output/output-5.txt
-# 	./solution ./tests/test-6.txt 3 3 5 | tee output/output-6.txt
-# 	./solution ./tests/test-7.txt 3 3 5 | tee output/output-7.txt
-# 	./solution ./tests/test-8.txt 3 3 5 | tee output/output-8.txt
-# 	./solution ./tests/test-9.txt 3 3 5 | tee output/output-9.txt
-# 	./solution ./tests/test-10.txt 3 3 5 | tee output/output-10.txt
+test-all: build
+	./solution ./tests/jobs-1.txt 3 3 5 | tee output/output-1.txt
+	./solution ./tests/jobs-2.txt 3 3 5 | tee output/output-2.txt
+	./solution ./tests/jobs-3.txt 3 3 5 | tee output/output-3.txt
+	./solution ./tests/jobs-4.txt 3 3 5 | tee output/output-4.txt
+	./solution ./tests/jobs-5.txt 3 3 5 | tee output/output-5.txt
+	./solution ./tests/jobs-6.txt 3 3 5 | tee output/output-6.txt
+	./solution ./tests/jobs-7.txt 3 3 5 | tee output/output-7.txt
+	./solution ./tests/jobs-8.txt 3 3 5 | tee output/output-8.txt
+	./solution ./tests/jobs-9.txt 3 3 5 | tee output/output-9.txt
+	./solution ./tests/jobs-10.txt 3 3 5 | tee output/output-10.txt
 
 run: build
 	./solution

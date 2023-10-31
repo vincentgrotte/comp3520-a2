@@ -4,9 +4,9 @@
 int main(int argc, char *argv[]) {
 
     // Parameters
-    int param_k; // time quanta for Level-0 queue
-    int param_t0; // time quanta for Level-1 queue
-    int param_t1; // number of iterations for a job in the Level-1 queue
+    int param_t0; // time quanta for Level-0 queue
+    int param_t1; // time quanta for Level-1 queue
+    int param_k; // number of iterations for a job in the Level-1 queue
 
     // ---------------------------
     //  Allow user to set parameters via command line
@@ -16,9 +16,9 @@ int main(int argc, char *argv[]) {
 
         printf("Using command line params\n");
         
-        param_k = strtol(argv[2], NULL, 10);
-        param_t0 = strtol(argv[3], NULL, 10);
-        param_t1 = strtol(argv[4], NULL, 10);
+        param_t0 = strtol(argv[2], NULL, 10);
+        param_t1 = strtol(argv[3], NULL, 10);
+        param_k = strtol(argv[4], NULL, 10);
             
         printf("L0Q max time: %d\n", param_t0);
         printf("L1Q max time: %d\n", param_t1);
