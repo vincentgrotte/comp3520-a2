@@ -165,17 +165,6 @@ int main(int argc, char *argv[]) {
                 av_turnaround_time += turnaround_time;
                 av_wait_time += (turnaround_time - current_process->service_time);   
                 
-                // printf(
-                //     "[*] L%d::%d [%d] COMPLETE A:%d S:%d T:%d, W:%d\n",
-                //     current_process->queue,
-                //     current_process->pid,
-                //     timer,
-                //     current_process->arrival_time,
-                //     current_process->service_time,
-                //     turnaround_time, 
-                //     turnaround_time - current_process->service_time
-                // );
-
                 // Free up process structure memory
                 free(current_process);
                 current_process = NULL;
@@ -189,8 +178,6 @@ int main(int argc, char *argv[]) {
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
 
-                // printf("[*] L0::%d [%d] rolling over to L1 \n", current_process->pid, timer);
-                
                 // Enqueue it on the L1 queue
                 current_process->queue = 1;
                 L1_queue = EnqPcb(L1_queue, current_process);
@@ -204,8 +191,6 @@ int main(int argc, char *argv[]) {
             
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
-
-                // printf("[*] L1::%d [%d] rolling over to L2 \n", current_process->pid, timer);
 
                 // Enqueue it on the L2 queue
                 current_process->queue = 2;
@@ -225,13 +210,6 @@ int main(int argc, char *argv[]) {
                 // Send SIGTSTP to suspend it
                 SuspendPcb(current_process);
                 
-                // printf(
-                //     "[*] L1::%d [%d] iteration (%d) finished\n",
-                //     current_process->pid,
-                //     timer,
-                //     current_process->iterations
-                // );
-
                 // Enqueue it on the end of the L1 queue
                 L1_queue = EnqPcb(L1_queue, current_process);
                 current_process = NULL;                
@@ -245,13 +223,6 @@ int main(int argc, char *argv[]) {
 
                     // Send SIGTSTP to suspend it
                     SuspendPcb(current_process);
-
-                    // printf(
-                    //     "[*] L2::%d [%d] interrupted at %d cpu time spent...\n",
-                    //     current_process->cpu_time_spent,
-                    //     current_process->pid,
-                    //     timer
-                    // );
 
                     // Enqueue it on the L2 queue
                     L2_queue = EnqPcb(L2_queue, current_process);
@@ -303,7 +274,7 @@ int main(int argc, char *argv[]) {
 
             } else {
 
-                // printf("No jobs being processed currently...\n");
+                //
 
             }
 
