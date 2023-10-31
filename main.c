@@ -15,10 +15,10 @@ int main(int argc, char *argv[]) {
     if ( argc == 5 ) {
 
         printf("Using command line params\n");
-        
-        param_t0 = strtol(argv[2], NULL, 10);
-        param_t1 = strtol(argv[3], NULL, 10);
-        param_k = strtol(argv[4], NULL, 10);
+
+        sscanf(argv[2], "%d", &param_t0);
+        sscanf(argv[3], "%d", &param_t1);
+        sscanf(argv[4], "%d", &param_k);
             
         printf("L0Q max time: %d\n", param_t0);
         printf("L1Q max time: %d\n", param_t1);

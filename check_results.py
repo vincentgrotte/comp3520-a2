@@ -7,6 +7,7 @@ def verbose_print(*args):
     if (os.environ.get("VERBOSE") == "1"):
         print(*args)
 
+
 if not len(sys.argv) == 3:
     raise "Usage: <jobs_file_path> <output_file_path>"
 
@@ -46,6 +47,7 @@ verbose_print("params")
 verbose_print("L0Q max time:", param_t0)
 verbose_print("L1Q max time:", param_t1)
 verbose_print("L1Q max iterations:", param_k)
+verbose_print("Total time:", param_t0 + param_t1 * param_k)
 
 # Get all pid logs
 pid_logs = {}
