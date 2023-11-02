@@ -138,7 +138,6 @@ int main(int argc, char *argv[]) {
     // - or there is a currently running process:
 
     while ( job_queue || L0_queue || L1_queue || L2_queue || current_process ) {
-    // while (job_queue || L0_queue || L1_queue || L2_queue || current_process ) {
 
         // Unload any pending processes from the input queue:
         // While (head-of-input-queue.arrival-time <= dispatcher timer)
