@@ -155,7 +155,8 @@ int main(int argc, char *argv[]) {
         if (current_process) {
             
             // If the process is complete
-            if (current_process->cpu_time_spent >= current_process->service_time) {
+            if (current_process->cpu_time_spent >= current_process->service_time ||
+                current_process->service_time <= 0) {
 
                 // Send SIGINT to the process to terminate it
                 TerminatePcb(current_process);

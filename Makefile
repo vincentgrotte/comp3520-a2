@@ -28,6 +28,12 @@ build: build-base
 roll:
 	./random random-jobs.txt
 
+# Run the solution against the stage 2 test files
+.PHONY: test-stage-2
+test-stage-2: build
+	./solution ./stage-2-tests/job-dispatch-list-1 3 5 2 | tee output/stage-2-output-1.txt
+	./solution ./stage-2-tests/job-dispatch-list-2 5 5 3 | tee output/stage-2-output-2.txt
+
 # Run the solution against a test file
 .PHONY: test
 test: build
