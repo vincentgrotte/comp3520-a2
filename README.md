@@ -3,7 +3,7 @@ SID: 309193168
 To build and run the module do:
 
 - make build
-- ./solution <job-list-file>
+- ./solution job-list-file
 
 To run the sanity checker:
 
