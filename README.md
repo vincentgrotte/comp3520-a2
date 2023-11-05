@@ -10,7 +10,6 @@ make test-all
 
 Notes on tests:
 
-jobs-1:
 start with 0, 0
 increasing arrival times
 range-bound, increasing service times
