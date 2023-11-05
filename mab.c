@@ -1,34 +1,7 @@
 #include "mab.h"
 
-// 2^13 is the lowest power of 2 that can hold 8mb
-// Used to determine max memory for a single process
-#define MIN_ALLOC_LOG2 13
-#define MIN_ALLOC (1 << MIN_ALLOC_LOG2)
 
-// 2^31 is the lowest power of 2 that can hold 2gb 
-// Used to determine size of the total memory pool
-#define MAX_ALLOC_LOG2 31
-#define MAX_ALLOC (1 << MIN_ALLOC_LOG2)
-
-// Maximum number of possible nodes
-#define MAX_BLOCKS ((MAX_ALLOC_LOG2 - MIN_ALLOC_LOG2) * 2)
-
-// Starting address for this allocator's memory range.
-// Offsets start with this as 0
-static uint8_t *base_ptr;
-
-// Maximum address used by the allocator.
-// Used to know when to request more memory from kernel.
-static uint8_t *max_ptr;
-
-
-struct Stack {
-    MabPtr mab_ptr;
-    struct Stack * next;  
-} *top;
-
-
-Stack stack_pop() {
+MabPtr stack_pop(MabStack * top) {
 
     if (top == NULL) {
 
@@ -36,7 +9,7 @@ Stack stack_pop() {
 
     }
 
-    Stack tmp = top;
+    MabStack * tmp = top;
     MabPtr m = tmp->mab_ptr;
     free(top);
     top = tmp->next;
@@ -46,14 +19,14 @@ Stack stack_pop() {
 }
 
 
-void stack_push(MabPtr m) {
+MabStack * stack_push(MabPtr m, MabStack * top) {
 
-    struct Stack * new_stack_item = (struct Stack *) malloc(1 * sizeof(struct Stack));
+    MabStack * new_stack_item = (MabStack *) malloc(sizeof(MabStack));
 
     if (!new_stack_item) {
 
         fprintf(stderr, "ERROR: Could not create new stack item\n");
-        return NULL;
+        return new_stack_item;
 
     }
 
@@ -67,96 +40,111 @@ void stack_push(MabPtr m) {
     }
     
     top = new_stack_item;
+    return top;
 
 }
 
-
-MabPtr findBlock(MabPtr m, int size) {
-
-    MabPtr tmp = m;
-
-    
-
-    // Create left child if needed
-    if (tmp->left_child == NULL) {
-
-        if ( !(new_left_child = (MabPtr) malloc(sizeof(Mab))) ) {
-
-            fprintf(stderr, "ERROR: Could not create new memory access block\n");
-            return NULL;
-
-        }
-        
-        new_left_child->offset = ;
-        new_left_child->size = allocation;
-        new_left_child->allocated = 0;
-        new_left_child->parent = tmp;
-        new_left_child->left_child = NULL;
-        new_left_child->right_child = NULL;
-
-        tmp->left_child = new_left_child;
-
-    }
-    
-    // Create right child if needed
-    if (tmp->right_child == NULL) {
-
-        if ( !(new_right_child = (MabPtr) malloc(sizeof(Mab))) ) {
-            fprintf(stderr, "ERROR: Could not create new memory access block\n");
-            return NULL;
-        }
-        
-        new_right_child->offset = new_right_child;
-        new_right_child->size = allocation;
-        new_right_child->allocated = 0;
-        new_right_child->parent = tmp;
-        new_right_child->left_child = NULL;
-        new_right_child->right_child = NULL;
-
-        tmp->right_child = new_right_child;
-
-    }
-
-}
 
 MabPtr memMerge(MabPtr m) { // merge buddy memory blocks
 
-    //
+    MabPtr current_block = m;
+
+    while (current_block &&
+        current_block->parent &&
+        !current_block->parent->right_child &&
+        !current_block->parent->right_child->allocated &&
+        !current_block->parent->left_child &&
+        !current_block->parent->left_child->allocated) {
+
+        current_block = current_block->parent;
+
+        // Free both children
+        free(current_block->right_child);
+        free(current_block->left_child);
+
+    }
 
     return 0;
 
 }
+
 
 MabPtr memSplit(MabPtr m, int size) { // split a memory block
 
-    //
+    // Set m to unallocated
+    m->allocated = 0;
 
-    return 0;
+    // Create left child
+    MabPtr new_left_child = (MabPtr) malloc(sizeof(Mab));
+
+    if ( !new_left_child ) {
+        fprintf(stderr, "ERROR: Could not create new memory access block\n");
+        return NULL;
+    }
+    
+    new_left_child->offset = m->offset;
+    new_left_child->size = size;
+    new_left_child->allocated = 0;
+    new_left_child->parent = m;
+    new_left_child->left_child = NULL;
+    new_left_child->right_child = NULL;
+
+    // Attach left child to m
+    m->left_child = new_left_child;
+
+    // TODO: delete me
+    // printf("CREATE_LEFT_CHILD offset:%d size:%d\n", new_left_child->offset, new_left_child->size);
+
+    // Create right child
+    MabPtr new_right_child = (MabPtr) malloc(sizeof(Mab));
+
+    if ( !new_right_child ) {
+        fprintf(stderr, "ERROR: Could not create new memory access block\n");
+        return NULL;
+    }
+    
+    new_right_child->offset = m->offset + (m->size / 2);
+    new_right_child->size = size;
+    new_right_child->allocated = 0;
+    new_right_child->parent = m;
+    new_right_child->left_child = NULL;
+    new_right_child->right_child = NULL;
+
+    // Attach right child to m
+    m->right_child = new_right_child;
+
+    // TODO: delete me
+    // printf("CREATE_RIGHT_CHILD offset:%d size:%d\n", new_right_child->offset, new_right_child->size);
+
+    return m;
 
 }
 
+
 MabPtr memAlloc(MabPtr m, int size) { // allocate memory block
 
+    // printf("MEM_ALLOC exists:%d size:%d\n", !!m, size);
+
     // Check if request is possible
-    if (size > MAX_ALLOC) {
-        return NULL;
+    if (size > MAX_MEM) {
+
+        // printf("MAX_MEM %d smaller than %d\n", (int) MAX_MEM, size);
+
+        exit(EXIT_FAILURE);
+
     }
 
     // Default to the minimum size if request is too small
-    if (size < MIN_ALLOC) {
-        size = MIN_ALLOC;
+    if (size < MIN_MEM) {
+
+        // printf("MIN_MEM %d greater than %d\n", (int) MIN_MEM, size);
+
+        size = MIN_MEM;
+
     }
 
-    // If m is null we need to reserve the memory and initialise the tree
-    if (m == NULL) {
-
-        // Reserve the simulated memory space
-        char* start_Ptr = malloc(MAX_ALLOC);
-        
-        if (start_Ptr == NULL) {
-            fprintf(stderr, "ERROR: Could not initialise memory access tree\n");
-            return NULL;
-        }
+    // If m is null we need to initialise the tree
+    if (!m) {
 
         // Initialise the tree
         if ( !(m = (MabPtr) malloc(sizeof(Mab))) ) {
@@ -164,94 +152,142 @@ MabPtr memAlloc(MabPtr m, int size) { // allocate memory block
             return NULL;
         }
         
-        m->offset = start_Ptr;
-        m->size = MAX_ALLOC;
+        m->offset = 0;
+        m->size = MAX_MEM;
         m->allocated = 0;
         m->parent = NULL;
         m->left_child = NULL;
         m->right_child = NULL;
 
+        // printf("INIT_TREE size:%d\n", m->size);
+
+        return m;
+
+    }
+
+    // Figure out which depth the block should have
+    int target_size = MAX_MEM;
+    int target_depth = 1;
+
+    // printf("FIND_TARGET_DEPTH size:%d size_t:%d depth_t:%d\n", size, target_size, target_depth);
+
+    while (target_size > size) {
+    
+        // Scan the powers of 2
+        // Find the smallest allocation large enough
+        target_size = target_size / 2;
+        target_depth++;
+
+        // printf("FIND_TARGET_DEPTH size:%d size_t:%d depth_t:%d\n", size, target_size, target_depth);
+
     }
 
     // Find a block for this memory request
-    MabPtr tmp = m;
-    int allocation = MAX_ALLOC;
+    MabPtr current_block = m;
+    int current_depth = 1;
+    MabStack * unvisited = (MabStack *) malloc(sizeof(MabStack));
 
-    while (allocation > size) {
+    // printf("SCAN_AT_DEPTH depth:%d\n", current_depth);
+    
+    // While there are still blocks to visit
+    while ( unvisited && current_block ) {
 
-        // Scan the powers of 2
-        allocation = allocation / 2;
-        
-        // Create left child if needed
-        if (tmp->left_child == NULL) {
-
-            if ( !(new_left_child = (MabPtr) malloc(sizeof(Mab))) ) {
-                fprintf(stderr, "ERROR: Could not create new memory access block\n");
-                return NULL;
-            }
+        // If the current block is unallocated and at the target depth
+        if (!current_block->allocated && current_depth == target_depth) {
             
-            new_left_child->offset = ;
-            new_left_child->size = allocation;
-            new_left_child->allocated = 0;
-            new_left_child->parent = tmp;
-            new_left_child->left_child = NULL;
-            new_left_child->right_child = NULL;
+            current_block->allocated = 1;
 
-            tmp->left_child = new_left_child;
+            // printf("FOUND_ALLOC depth:%d\n", current_depth);
+
+            if (unvisited) {
+
+                // printf("UNVISITED STILL HAS BLOCKS FLOATING AROUND\n");
+
+                // while (unvisited && unvisited->next) {
+
+                //     MabStack * next = unvisited->next;
+                //     unvisited = unvisited->next;
+                //     free(unvisited);
+                //     unvisited = next;
+
+                // }
+
+            }
+
+            break;
 
         }
-        
-        // Create right child if needed
-        if (tmp->right_child == NULL) {
 
-            if ( !(new_right_child = (MabPtr) malloc(sizeof(Mab))) ) {
-                fprintf(stderr, "ERROR: Could not create new memory access block\n");
-                return NULL;
-            }
+        // If there are no child blocks
+        if (!current_block->right_child && !current_block->left_child) {
+
+            // New blocks will be half the current size
+            current_block = memSplit(current_block, ( current_block->size / 2 ));
+
+            // printf("MEM_SPLIT size:%d depth:%d\n", current_block->size, current_depth);
+
+        }
+
+        // If the right child is not allocated
+        if (!current_block->right_child->allocated) {
             
-            new_right_child->offset = new_right_child;
-            new_right_child->size = allocation;
-            new_right_child->allocated = 0;
-            new_right_child->parent = tmp;
-            new_right_child->left_child = NULL;
-            new_right_child->right_child = NULL;
+            unvisited = stack_push(current_block->right_child, unvisited);
 
-            tmp->right_child = new_right_child;
+            // printf("STACK_RIGHT_CHILD size:%d depth:%d\n", ( current_block->size / 2 ), current_depth);
 
         }
 
         // If the left child is not allocated
-        if (!tmp->left_child->allocated) {
+        if (!current_block->left_child->allocated) {
             
-            // set the left child as tmp
-            tmp = tmp->left_child;
+            unvisited = stack_push(current_block->left_child, unvisited);
+
+            // printf("STACK_LEFT_CHILD size:%d depth:%d\n", ( current_block->size / 2 ), current_depth);
 
         }
-        
-        // If the right child is not allocated
-        else if (!tmp->left_child->allocated) {
-            
-            // set the right child as tmp
-            tmp = tmp->left_child;
 
-        // If both are already allocated
+        if (!current_block->right_child->allocated
+            || !current_block->left_child->allocated) {
+
+            current_depth++;
+
         } else {
 
-            return NULL;
+            current_depth--;
 
         }
+
+        // pop the next block on the unvisited stack into current_block
+        current_block = stack_pop(unvisited);
+
+        // printf("SCAN_AT_DEPTH depth:%d\n", current_depth);
 
     }
 
+    // // clean up remaining unvisited blocks
+    // // this can happen if the target block is found before all blocks are visited
+    // if (unvisited) {
 
+    //     while (unvisited) stack_pop(unvisited);
+    
+    // }
 
-    return m;
+    return current_block;
 
 }
 
+
 MabPtr memFree(MabPtr m) { // free memory block
 
-    //
+    m->allocated = 0;
+
+    if (m->parent &&
+        !m->parent->right_child->allocated &&
+        !m->parent->left_child->allocated) {
+
+        memMerge(m->parent);
+
+    }
 
     return 0;
 

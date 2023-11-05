@@ -1,7 +1,7 @@
 /* PCB include header file for RR dispatcher */
 
-#ifndef RR_PCB
-#define RR_PCB
+#ifndef PCB
+#define PCB
 
 /* Include files */
 #include <stdio.h>
@@ -11,6 +11,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "mab.h"
+
 #ifndef FALSE
 #define FALSE 0
 #endif
@@ -19,7 +21,7 @@
 #define TRUE 1
 #endif
 
-/* Process Management Definitions *****************************/
+/* Process Management Definitions */
 #define PCB_UNINITIALIZED 0
 #define PCB_INITIALIZED 1
 #define PCB_READY 2
@@ -38,6 +40,8 @@ struct pcb {
     int iterations;
     int queue;
     int status;
+    int size;
+    MabPtr mab_ptr;
     struct pcb * next;
 };
 

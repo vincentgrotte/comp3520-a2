@@ -28,6 +28,8 @@ PcbPtr CreatenullPcb()
     new_process_Ptr->iterations = 0;
     new_process_Ptr->queue = 0;
     new_process_Ptr->status = PCB_UNINITIALIZED;
+    new_process_Ptr->mab_ptr = NULL;
+    new_process_Ptr->size = 0;
     new_process_Ptr->next = NULL;
     return new_process_Ptr;
 }

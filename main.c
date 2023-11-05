@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
 
     FILE * input_list_stream = NULL;
     PcbPtr job_queue = NULL;
+    PcbPtr arrival_queue = NULL;
     PcbPtr L0_queue = NULL;
     PcbPtr L1_queue = NULL;
     PcbPtr L2_queue = NULL;
@@ -77,7 +78,7 @@ int main(int argc, char *argv[]) {
 
     int turnaround_time;
     double av_turnaround_time = 0.0, av_wait_time = 0.0;
-    int n = 0;
+    int n_jobs = 0;
 
     // ---------------------------
     //  Read job list from command line argument
@@ -114,9 +115,10 @@ int main(int argc, char *argv[]) {
         
         process = CreatenullPcb();
         
-        if (fscanf(input_list_stream, "%d, %d\n",
+        if (fscanf(input_list_stream, "%d, %d, %d\n",
             &(process->arrival_time),
-            &(process->service_time)) != 2) {
+            &(process->service_time),
+            &(process->size)) != 3) {
 
             free(process);
             continue;
@@ -125,7 +127,17 @@ int main(int argc, char *argv[]) {
 
         process->status = PCB_INITIALIZED;
         job_queue = EnqPcb(job_queue, process);
-	    n++;
+        n_jobs++;
+
+    }
+
+    // Initialise root of mab tree
+    MabPtr root_mab_ptr = memAlloc(NULL, 0);
+
+    if (root_mab_ptr == NULL) {
+
+        fprintf(stderr, "ERROR: Could not create memory access tree\n");
+        exit(EXIT_FAILURE);
 
     }
 
@@ -137,24 +149,61 @@ int main(int argc, char *argv[]) {
     // - there's anything in any of the queues
     // - or there is a currently running process:
 
-    while ( job_queue || L0_queue || L1_queue || L2_queue || current_process ) {
+    while ( job_queue 
+        || arrival_queue
+        || L0_queue
+        || L1_queue
+        || L2_queue
+        || current_process ) {
 
-        // Unload any pending processes from the input queue:
+        // Unload any pending processes from the job queue:
         // While (head-of-input-queue.arrival-time <= dispatcher timer)
-        // dequeue process from input queue and enqueue on L0 queue;
+        // dequeue process from input queue and enqueue on arrival queue;
         while (job_queue && job_queue->arrival_time <= timer) {
 
-            process = DeqPcb(&job_queue);             // dequeue process
-            process->status = PCB_READY;                // set pcb ready
-            L0_queue = EnqPcb(L0_queue, process);     // & put on L0 queue
+            process = DeqPcb(&job_queue); // dequeue process
+            arrival_queue = EnqPcb(arrival_queue, process); // & put on arrival queue
+
+        }
+
+        // Processes in the arrival queue wait for memory allocation
+        // They are then enqueued on the L0 queue
+        while (arrival_queue && arrival_queue->arrival_time <= timer) {
+
+            process = DeqPcb(&arrival_queue);
+            
+            // printf("[DEBUG] DEQUEUE_ARRIVAL arrival:%d service:%d size:%d\n",
+            //     process->arrival_time,
+            //     process->service_time,
+            //     process->size
+            // );
+
+            // Get some memory
+            MabPtr new_mab_ptr = NULL;
+
+            // Wait forever
+            // while (!new_mab_ptr) {
+            new_mab_ptr = memAlloc(root_mab_ptr, process->size);
+            // }
+
+            process->mab_ptr = new_mab_ptr; // set mab pointer
+            process->status = PCB_READY; // set pcb ready
+            L0_queue = EnqPcb(L0_queue, process);
 
         }
 
         // If a process is currently running;
         if (current_process) {
-            
+
+            // printf("[DEBUG] cpu:%d service:%d arrival:%d\n",
+            //     current_process->cpu_time_spent,
+            //     current_process->service_time,
+            //     current_process->arrival_time
+            // );
+
             // If the process is complete
-            if (current_process->cpu_time_spent >= current_process->service_time) {
+            if (current_process->cpu_time_spent >= current_process->service_time ||
+                current_process->service_time == 0) {
 
                 // Send SIGINT to the process to terminate it
                 TerminatePcb(current_process);
@@ -162,8 +211,14 @@ int main(int argc, char *argv[]) {
                 // Calculate and accumulate turnaround time and wait time;
                 turnaround_time = timer - current_process->arrival_time;
                 av_turnaround_time += turnaround_time;
-                av_wait_time += (turnaround_time - current_process->service_time);   
+                av_wait_time += (turnaround_time - current_process->service_time);
                 
+                // printf("[DEBUG] average turnaround time = %f\n", av_turnaround_time);
+                // printf("[DEBUG] average wait time = %f\n", av_wait_time);
+
+                // Free up the memory access block
+                memFree(current_process->mab_ptr);
+
                 // Free up process structure memory
                 free(current_process);
                 current_process = NULL;
@@ -284,12 +339,12 @@ int main(int argc, char *argv[]) {
             
         // Increment dispatcher timer;
         timer++;
-        
+
     }
 
     // print out average turnaround time and average wait time
-    av_turnaround_time = av_turnaround_time / n;
-    av_wait_time = av_wait_time / n;
+    av_turnaround_time = av_turnaround_time / n_jobs;
+    av_wait_time = av_wait_time / n_jobs;
     printf("average turnaround time = %f\n", av_turnaround_time);
     printf("average wait time = %f\n", av_wait_time);
     
