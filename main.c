@@ -174,12 +174,6 @@ int main(int argc, char *argv[]) {
 
             process = DeqPcb(&arrival_queue);
             
-            // printf("[DEBUG] DEQUEUE_ARRIVAL arrival:%d service:%d size:%d\n",
-            //     process->arrival_time,
-            //     process->service_time,
-            //     process->size
-            // );
-
             // Get some memory
             MabPtr new_mab_ptr = NULL;
 
@@ -198,12 +192,6 @@ int main(int argc, char *argv[]) {
         // If a process is currently running;
         if (current_process) {
 
-            // printf("[DEBUG] cpu:%d service:%d arrival:%d\n",
-            //     current_process->cpu_time_spent,
-            //     current_process->service_time,
-            //     current_process->arrival_time
-            // );
-
             // If the process is complete
             if (current_process->cpu_time_spent >= current_process->service_time ||
                 current_process->service_time == 0) {
@@ -216,9 +204,6 @@ int main(int argc, char *argv[]) {
                 av_turnaround_time += turnaround_time;
                 av_wait_time += (turnaround_time - current_process->service_time);
                 
-                // printf("[DEBUG] average turnaround time = %f\n", av_turnaround_time);
-                // printf("[DEBUG] average wait time = %f\n", av_wait_time);
-
                 // Free up the memory access block
                 memFree(current_process->mab_ptr);
 
@@ -305,8 +290,6 @@ int main(int argc, char *argv[]) {
 
                 // Dequeue process from L0 queue
                 current_process = DeqPcb(&L0_queue);
-
-                // printf("[DEBUG] PROC_START L0_queue\n");
                 
                 // If already started but suspended, restart it (send SIGCONT to it)
                 // else start it (fork & exec)
@@ -318,8 +301,6 @@ int main(int argc, char *argv[]) {
 
                 // Dequeue process from L1 queue
                 current_process = DeqPcb(&L1_queue);
-
-                // printf("[DEBUG] PROC_START L1_queue\n");
                 
                 // (re)start it (send SIGCONT to it)
                 StartPcb(current_process);
@@ -329,8 +310,6 @@ int main(int argc, char *argv[]) {
 
                 // Dequeue process from L1 queue
                 current_process = DeqPcb(&L2_queue);
-
-                // printf("[DEBUG] PROC_START L2_queue\n");
                 
                 // (re)start it (send SIGCONT to it)
                 StartPcb(current_process);

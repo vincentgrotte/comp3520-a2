@@ -4,44 +4,37 @@ BUILD := gcc -pthread \
 	pcb.c \
 	-o solution
 
-# ----------------------------------------------------------
-.PHONY: build
-build:
+# Build the solution
+.PHONY: build-base
+build-base:
 	$(BUILD)
 
-# ----------------------------------------------------------
-.PHONY: build-all
-build-all: build
+# Build the solution with -Wall
+.PHONY: build-strict
+build-strict:
+	$(BUILD) -Wall
+
+# Build the random module
+.PHONY: build-random
+build-random:
 	gcc random.c -o random -lm
+
+# Build sigtrap and the solution
+.PHONY: build
+build: build-base
 	gcc sigtrap.c -o process
 
-# ----------------------------------------------------------
-.PHONY: check
-check:
-	python3 check_results.py ./tests/jobs.txt ./output/output.txt
-
-# ----------------------------------------------------------
-.PHONY: check-verbose
-check-verbose:
-	VERBOSE=1 python3 check_results.py ./tests/jobs.txt ./output/output.txt
-
-# ----------------------------------------------------------
-.PHONY: debug
-debug:
-	$(BUILD) -Wall
-	./solution ./tests/jobs.txt 3 5 2 | tee output/output.txt
-
-# ----------------------------------------------------------
+# Generate some random jobs
 .PHONY: roll
 roll:
-	./random test-input.txt
+	./random random-jobs.txt
 
-# ----------------------------------------------------------
+# Run the solution against a test file
 .PHONY: test
 test: build
 	./solution ./tests/jobs.txt 3 5 2 | tee output/output.txt
 
-# ----------------------------------------------------------
+# Run the solution against multiple test files
 .PHONY: test-all
 test-all: build
 	./solution ./tests/jobs.txt 3 5 2 | tee output/output.txt
@@ -49,24 +42,13 @@ test-all: build
 	./solution ./tests/jobs-2.txt 3 5 2 | tee output/output-2.txt
 	./solution ./tests/jobs-3.txt 3 5 2 | tee output/output-3.txt
 
-# ----------------------------------------------------------
-.PHONY: test-flow
-test-flow: build
-	./solution ./tests/jobs.txt 3 5 2 | tee output/output.txt
-	python3 check_results.py ./tests/jobs.txt ./output/output.txt
-
-# ----------------------------------------------------------
-.PHONY: run
-run: build
-	./solution
-
-# ----------------------------------------------------------
+# Run run the solution against a test file through valgrind
 .PHONY: val
 val: build
 	valgrind ./solution ./tests/jobs.txt 3 5 2
 
-# ----------------------------------------------------------
-.PHONY: val
+# Run run the solution against a test file through valgrind with lots of flags
+.PHONY: val-big
 val-big: build
 	valgrind --leak-check=full \
         --show-leak-kinds=all \
