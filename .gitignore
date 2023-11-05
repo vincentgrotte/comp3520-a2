@@ -2,3 +2,4 @@ output/
 process
 random
 solution
+valgrind-out.txt

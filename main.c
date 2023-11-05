@@ -121,6 +121,8 @@ int main(int argc, char *argv[]) {
             &(process->size)) != 3) {
 
             free(process);
+            process = NULL;
+
             continue;
         
         }
@@ -181,6 +183,7 @@ int main(int argc, char *argv[]) {
             // Get some memory
             MabPtr new_mab_ptr = NULL;
 
+            // TODO:
             // Wait forever
             // while (!new_mab_ptr) {
             new_mab_ptr = memAlloc(root_mab_ptr, process->size);
@@ -302,6 +305,8 @@ int main(int argc, char *argv[]) {
 
                 // Dequeue process from L0 queue
                 current_process = DeqPcb(&L0_queue);
+
+                // printf("[DEBUG] PROC_START L0_queue\n");
                 
                 // If already started but suspended, restart it (send SIGCONT to it)
                 // else start it (fork & exec)
@@ -313,6 +318,8 @@ int main(int argc, char *argv[]) {
 
                 // Dequeue process from L1 queue
                 current_process = DeqPcb(&L1_queue);
+
+                // printf("[DEBUG] PROC_START L1_queue\n");
                 
                 // (re)start it (send SIGCONT to it)
                 StartPcb(current_process);
@@ -322,6 +329,8 @@ int main(int argc, char *argv[]) {
 
                 // Dequeue process from L1 queue
                 current_process = DeqPcb(&L2_queue);
+
+                // printf("[DEBUG] PROC_START L2_queue\n");
                 
                 // (re)start it (send SIGCONT to it)
                 StartPcb(current_process);

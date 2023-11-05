@@ -1,25 +1,53 @@
 #include "mab.h"
 
 
-MabPtr stack_pop(MabStack * top) {
+// 2^13 is the lowest power of 2 of bytes that can hold 8mb
+// Used to determine max memory for a single process
+// 8192
+static unsigned int MIN_MEM = 8;
 
-    if (top == NULL) {
+// 2^31 is the lowest power of 2 of bytes that can hold 2gb 
+// Used to determine size of the total memory pool
+// 2147483648
+static unsigned int MAX_MEM = 2048;
+
+
+MabStack * stack_pop(MabStack * top) {
+
+    MabStack * tmp = NULL;
+
+    if (!top) {
 
         return NULL;
 
     }
+    
+    if (top->next) {
+        
+        tmp = top->next;
 
-    MabStack * tmp = top;
-    MabPtr m = tmp->mab_ptr;
+    }
+
     free(top);
-    top = tmp->next;
+    top = NULL;
 
-    return m;
+    return tmp;
 
 }
 
 
-MabStack * stack_push(MabPtr m, MabStack * top) {
+void stack_clear(MabStack * top) {
+
+    while (top) {
+
+        top = stack_pop(top);
+
+    }
+
+}
+
+
+MabStack * stack_push(MabPtr m, MabStack * top, int depth) {
 
     MabStack * new_stack_item = (MabStack *) malloc(sizeof(MabStack));
 
@@ -32,8 +60,9 @@ MabStack * stack_push(MabPtr m, MabStack * top) {
 
     new_stack_item->mab_ptr = m;
     new_stack_item->next = NULL;
+    new_stack_item->depth = depth;
 
-    if (top != NULL) {
+    if (top) {
 
         new_stack_item->next = top;
 
@@ -47,20 +76,24 @@ MabStack * stack_push(MabPtr m, MabStack * top) {
 
 MabPtr memMerge(MabPtr m) { // merge buddy memory blocks
 
-    MabPtr current_block = m;
+    while (m &&
+        m->parent &&
+        m->parent->right_child &&
+        !m->parent->right_child->allocated &&
+        m->parent->left_child &&
+        !m->parent->left_child->allocated) {
 
-    while (current_block &&
-        current_block->parent &&
-        !current_block->parent->right_child &&
-        !current_block->parent->right_child->allocated &&
-        !current_block->parent->left_child &&
-        !current_block->parent->left_child->allocated) {
-
-        current_block = current_block->parent;
+        // Jump up a level
+        m = m->parent;
+        MabPtr right_child = m->right_child;
+        MabPtr left_child = m->left_child;
 
         // Free both children
-        free(current_block->right_child);
-        free(current_block->left_child);
+        free(right_child);
+        free(left_child);
+
+        m->right_child = NULL;
+        m->left_child = NULL;
 
     }
 
@@ -92,9 +125,6 @@ MabPtr memSplit(MabPtr m, int size) { // split a memory block
     // Attach left child to m
     m->left_child = new_left_child;
 
-    // TODO: delete me
-    // printf("CREATE_LEFT_CHILD offset:%d size:%d\n", new_left_child->offset, new_left_child->size);
-
     // Create right child
     MabPtr new_right_child = (MabPtr) malloc(sizeof(Mab));
 
@@ -112,9 +142,6 @@ MabPtr memSplit(MabPtr m, int size) { // split a memory block
 
     // Attach right child to m
     m->right_child = new_right_child;
-
-    // TODO: delete me
-    // printf("CREATE_RIGHT_CHILD offset:%d size:%d\n", new_right_child->offset, new_right_child->size);
 
     return m;
 
@@ -184,7 +211,7 @@ MabPtr memAlloc(MabPtr m, int size) { // allocate memory block
 
     // Find a block for this memory request
     MabPtr current_block = m;
-    int current_depth = 1;
+    int current_depth = 0;
     MabStack * unvisited = (MabStack *) malloc(sizeof(MabStack));
 
     // printf("SCAN_AT_DEPTH depth:%d\n", current_depth);
@@ -199,20 +226,9 @@ MabPtr memAlloc(MabPtr m, int size) { // allocate memory block
 
             // printf("FOUND_ALLOC depth:%d\n", current_depth);
 
-            if (unvisited) {
-
-                // printf("UNVISITED STILL HAS BLOCKS FLOATING AROUND\n");
-
-                // while (unvisited && unvisited->next) {
-
-                //     MabStack * next = unvisited->next;
-                //     unvisited = unvisited->next;
-                //     free(unvisited);
-                //     unvisited = next;
-
-                // }
-
-            }
+            // clean up remaining unvisited blocks
+            // this can happen if the target block is found before all blocks are visited
+            // stack_clear(unvisited);
 
             break;
 
@@ -229,48 +245,53 @@ MabPtr memAlloc(MabPtr m, int size) { // allocate memory block
         }
 
         // If the right child is not allocated
-        if (!current_block->right_child->allocated) {
+        if (current_block->right_child && !current_block->right_child->allocated) {
             
-            unvisited = stack_push(current_block->right_child, unvisited);
+            unvisited = stack_push(current_block->right_child, unvisited, current_depth + 1);
 
             // printf("STACK_RIGHT_CHILD size:%d depth:%d\n", ( current_block->size / 2 ), current_depth);
 
         }
 
         // If the left child is not allocated
-        if (!current_block->left_child->allocated) {
+        if (current_block->left_child && !current_block->left_child->allocated) {
             
-            unvisited = stack_push(current_block->left_child, unvisited);
+            unvisited = stack_push(current_block->left_child, unvisited, current_depth + 1);
 
             // printf("STACK_LEFT_CHILD size:%d depth:%d\n", ( current_block->size / 2 ), current_depth);
-
-        }
-
-        if (!current_block->right_child->allocated
-            || !current_block->left_child->allocated) {
-
-            current_depth++;
-
-        } else {
-
-            current_depth--;
-
+            // sleep(1);
         }
 
         // pop the next block on the unvisited stack into current_block
-        current_block = stack_pop(unvisited);
+        MabStack * next_unvisited = NULL;
+        
+        if (unvisited) {
 
-        // printf("SCAN_AT_DEPTH depth:%d\n", current_depth);
+            next_unvisited = stack_pop(unvisited);
+
+        } else {
+
+            current_block = NULL;
+
+        }
+
+        if (next_unvisited && next_unvisited->mab_ptr) {
+
+            current_block = next_unvisited->mab_ptr;
+            current_depth = next_unvisited->depth;
+            
+            // printf("SCAN_AT_DEPTH depth:%d\n", current_depth);
+            // sleep(1);
+
+        } else {
+            
+            current_block = NULL;
+
+        }
 
     }
 
-    // // clean up remaining unvisited blocks
-    // // this can happen if the target block is found before all blocks are visited
-    // if (unvisited) {
-
-    //     while (unvisited) stack_pop(unvisited);
-    
-    // }
+    // printf("FINISHED SCAN\n");
 
     return current_block;
 
@@ -279,16 +300,20 @@ MabPtr memAlloc(MabPtr m, int size) { // allocate memory block
 
 MabPtr memFree(MabPtr m) { // free memory block
 
-    m->allocated = 0;
+    if (!m) {
 
-    if (m->parent &&
-        !m->parent->right_child->allocated &&
-        !m->parent->left_child->allocated) {
-
-        memMerge(m->parent);
+        return NULL;
 
     }
 
-    return 0;
+    m->allocated = 0;
+
+    if (m->parent) {
+
+        memMerge(m);
+
+    }
+
+    return NULL;
 
 }
